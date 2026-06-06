@@ -1,0 +1,13 @@
+services:
+  ai-agent-platform:
+    build: .
+    container_name: ai-agent-platform
+    ports:
+      - "8001:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:///./data/agent_platform.db
+    restart: unless-stopped

@@ -1,0 +1,36 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Databases and local runtime data
+*.db
+*.sqlite
+*.sqlite3
+agent_platform.db
+ai_agent_platform.db
+data/
+
+# uv and local caches
+.uv-cache/
+
+# Docker and local compose artifacts
+docker-compose.override.yml
+.docker/
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

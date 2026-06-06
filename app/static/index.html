@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Agent Platform</title>
+    <link rel="stylesheet" href="/app/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h1>Sessions</h1>
+          <button id="new-chat" type="button" title="Start new chat">+</button>
+        </div>
+        <div id="sessions" class="sessions" aria-live="polite"></div>
+      </aside>
+
+      <main class="chat">
+        <header class="chat-header">
+          <div>
+            <p class="eyebrow">AI Agent Platform</p>
+            <h2 id="chat-title">New chat</h2>
+          </div>
+          <button id="refresh-sessions" type="button">Refresh</button>
+        </header>
+
+        <section id="messages" class="messages" aria-live="polite">
+          <div class="empty-state">
+            <h3>Ask the agent something.</h3>
+            <p>Previous sessions appear on the left after messages are saved.</p>
+          </div>
+        </section>
+
+        <form id="chat-form" class="composer">
+          <input
+            id="message-input"
+            name="message"
+            type="text"
+            autocomplete="off"
+            placeholder="Type a message..."
+            required
+          />
+          <button id="send-button" type="submit">Send</button>
+        </form>
+      </main>
+    </div>
+
+    <script src="/app/app.js"></script>
+  </body>
+</html>

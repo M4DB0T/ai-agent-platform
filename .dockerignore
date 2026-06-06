@@ -1,0 +1,14 @@
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.env
+.git
+.gitignore
+agent_platform.db
+*.db
+.DS_Store
+.vscode
+.idea
