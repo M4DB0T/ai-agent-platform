@@ -1,16 +1,28 @@
 # AI Agent Platform
 
-AI Agent Platform is a FastAPI-based backend-focused AI engineering portfolio project with a simple frontend UI. It demonstrates OpenAI tool calling, session-based memory, SQLite logging, tool execution history, Docker, and uv-based dependency management.
+AI Agent Platform is a FastAPI-based AI engineering portfolio project with a simple frontend UI. It demonstrates OpenAI tool calling, session-based memory, SQLite logging, tool execution history, Docker support, and `uv`-based dependency management.
 
-Suggested repository description:
+This project is backend-focused, but it also includes a lightweight frontend built with plain HTML, CSS, and JavaScript so the system can be tested through a simple local chat interface.
 
-```text
+## Repository Description
+
 AI Agent Platform built with FastAPI, OpenAI tool calling, session memory, SQLite logging, calculator and Wikipedia tools, frontend UI, uv, and Docker.
-```
 
 ## Problem It Solves
 
-Many AI demos only show a single prompt and response. This project shows the backend engineering needed for a practical AI agent service: structured API contracts, session continuity, tool execution, persistent logs, error capture, and a simple UI for testing real conversations locally.
+Many AI demos only show a single prompt and response. This project demonstrates the backend engineering needed for a more practical AI agent service.
+
+It includes:
+
+- Structured API contracts
+- Session continuity
+- Tool execution
+- Persistent chat and tool logs
+- Error capture
+- A simple frontend for local testing
+- Docker-based reproducible setup
+
+The goal is to show how an AI assistant can do more than just answer text. It can use tools, remember session context, store logs, and expose useful backend APIs.
 
 ## Main Features
 
@@ -29,7 +41,7 @@ Many AI demos only show a single prompt and response. This project shows the bac
 - Pydantic request and response schemas
 - Simple frontend UI
 - Dockerfile and Docker Compose
-- uv for dependency management
+- `uv` for dependency management
 
 ## Tech Stack
 
@@ -40,23 +52,60 @@ Many AI demos only show a single prompt and response. This project shows the bac
 - SQLite
 - Pydantic
 - uv
-- Docker and Docker Compose
-- Plain HTML, CSS, and JavaScript
+- Docker
+- Docker Compose
+- HTML
+- CSS
+- JavaScript
 
 ## Architecture Overview
 
-The application is organized as a backend-first FastAPI service:
+The application is organized as a backend-first FastAPI service.
+
+```text
+User
+  |
+  v
+Frontend UI / Swagger / API Client
+  |
+  v
+FastAPI API Layer
+  |
+  v
+Agent Layer
+  |
+  v
+LLM Layer
+  |
+  +--------------------+
+  |                    |
+  v                    v
+OpenAI Model       Tool Registry
+                       |
+                       +--> Calculator Tool
+                       |
+                       +--> Wikipedia Tool
+  |
+  v
+SQLite Logging and Session Memory
+```
+
+Main project modules:
 
 - `app/main.py` creates the FastAPI app, initializes database tables, includes API routes, and serves the static frontend.
 - `app/api/chat.py` defines the chat, log, and session endpoints.
 - `app/agents/agent.py` coordinates agent execution.
 - `app/core/llm.py` communicates with OpenAI and handles tool-call decisions.
 - `app/tools/registry.py` defines available tools and dispatches tool execution.
+- `app/tools/calculator.py` contains the calculator tool.
+- `app/tools/wikipedia.py` contains the Wikipedia summary tool.
 - `app/db/` contains SQLAlchemy database setup and chat log models.
 - `app/schemas/` contains Pydantic API schemas.
 - `app/static/` contains the local frontend UI.
 
 ## Agent Flow
+
+The main chat flow works like this:
 
 1. A user sends a message to `POST /api/chat`.
 2. If no `session_id` is provided, the API automatically creates one.
@@ -70,7 +119,22 @@ The application is organized as a backend-first FastAPI service:
 
 ## Tool Calling
 
-Tool calling is handled through OpenAI function tools. The available tool schemas are registered in `app/tools/registry.py`. When the model decides a tool is useful, the backend parses the tool arguments, executes the matching local function, captures the result, and returns that result to the model for the final response.
+Tool calling is handled through OpenAI function tools.
+
+The available tool schemas are registered in:
+
+```text
+app/tools/registry.py
+```
+
+When the model decides that a tool is useful, the backend:
+
+1. Parses the requested tool name.
+2. Parses the tool arguments.
+3. Executes the matching local Python function.
+4. Captures the tool result or error.
+5. Sends the result back to the model.
+6. Stores the tool metadata in SQLite.
 
 Tool execution metadata is saved with each chat log:
 
@@ -79,67 +143,131 @@ Tool execution metadata is saved with each chat log:
 - `tool_output`
 - `tool_error`
 
-This makes tool behavior visible through both the API and the frontend.
+This makes tool behavior visible through both the API and frontend.
 
 ## Available Tools
 
 ### calculator
 
-Safely evaluates arithmetic expressions such as multiplication, division, percentages, powers, and other numeric calculations.
+The calculator tool safely evaluates arithmetic expressions.
 
-Example use:
+It is useful for:
+
+- Addition
+- Subtraction
+- Multiplication
+- Division
+- Percentages
+- Powers
+- Basic numeric calculations
+
+Example user message:
 
 ```text
 What is 25 * 1840 / 100?
 ```
 
+Expected tool metadata:
+
+```json
+{
+  "tool_used": "calculator",
+  "tool_input": "25 * 1840 / 100",
+  "tool_output": "460.0",
+  "tool_error": null
+}
+```
+
 ### wikipedia_search
 
-Searches Wikipedia for a topic and returns a short summary. It is intended for general knowledge questions about people, concepts, technologies, organizations, and historical events.
+The Wikipedia tool searches Wikipedia for a topic and returns a short summary.
 
-Example use:
+It is useful for general knowledge questions about:
+
+- People
+- Concepts
+- Technologies
+- Organizations
+- Historical events
+
+Example user message:
 
 ```text
 Who was Alan Turing?
 ```
 
+Expected tool metadata:
+
+```json
+{
+  "tool_used": "wikipedia_search",
+  "tool_input": "Alan Turing",
+  "tool_error": null
+}
+```
+
+Note: The Wikipedia tool uses Wikipedia summaries and is intended for general background context. It is not a real-time web search engine.
+
 ## Session Memory
 
 The API supports session-based memory using `session_id`.
 
-- If the client sends no `session_id`, the backend creates one automatically.
-- If the client sends an existing `session_id`, the backend loads recent messages from that session.
-- The agent receives relevant previous messages so it can answer with conversation context.
-- Session summaries are available through `GET /api/sessions`.
-- Full session history is available through `GET /api/sessions/{session_id}`.
+If the client sends no `session_id`, the backend creates one automatically.
+
+If the client sends an existing `session_id`, the backend loads recent messages from that session and passes them to the model as conversation history.
+
+This allows the assistant to answer with context from previous messages in the same session.
+
+Session-related endpoints:
+
+- `GET /api/sessions` returns session summaries.
+- `GET /api/sessions/{session_id}` returns full message history for one session.
 
 ## Logging and Observability
 
-Each chat interaction is stored in SQLite with:
+Each chat interaction is stored in SQLite.
 
-- user message
-- assistant answer
-- session ID
-- tool used
-- tool input
-- tool output
-- tool error
-- timestamp
+Stored fields include:
 
-The `GET /api/logs` endpoint exposes stored chat logs for debugging, review, and observability.
+- User message
+- Assistant answer
+- Session ID
+- Tool used
+- Tool input
+- Tool output
+- Tool error
+- Timestamp
+
+The endpoint below exposes stored chat logs:
+
+```text
+GET /api/logs
+```
+
+This is useful for:
+
+- Debugging
+- Reviewing tool calls
+- Checking errors
+- Understanding agent behavior
+- Observability during local development
 
 ## Frontend UI
 
-The project includes a simple frontend built with plain HTML, CSS, and JavaScript. It works locally without React, Vue, Next.js, or another frontend framework.
+The project includes a simple frontend built with plain HTML, CSS, and JavaScript.
+
+No frontend framework is required.
 
 The UI includes:
 
-- left sidebar with previous sessions from `GET /api/sessions`
-- main chat area for user and assistant messages
-- message input connected to `POST /api/chat`
-- automatic reuse of returned `session_id`
-- session history loading from `GET /api/sessions/{session_id}`
-- assistant tool metadata display when available
+- Left sidebar with previous sessions from `GET /api/sessions`
+- Main chat area for user and assistant messages
+- Message input connected to `POST /api/chat`
+- Automatic reuse of returned `session_id`
+- Session history loading from `GET /api/sessions/{session_id}`
+- Assistant tool metadata display when available
+- New chat flow
+- Loading state while waiting for a response
 
 After running the server, open:
 
@@ -147,7 +275,7 @@ After running the server, open:
 http://localhost:8000/app/
 ```
 
-or:
+If your project serves the frontend at `/ui`, open:
 
 ```text
 http://localhost:8000/ui
@@ -156,7 +284,7 @@ http://localhost:8000/ui
 ## API Endpoints
 
 | Method | Endpoint | Description |
-| --- | --- | --- |
+|---|---|---|
 | `POST` | `/api/chat` | Send a message to the AI agent. |
 | `GET` | `/api/logs` | Return all stored chat logs. |
 | `GET` | `/api/sessions` | Return session summaries ordered by recent activity. |
@@ -164,13 +292,22 @@ http://localhost:8000/ui
 
 ## Setup With uv
 
-Install dependencies:
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/YOUR_USERNAME/ai-agent-platform.git
+cd ai-agent-platform
+```
+
+### 2. Install dependencies
 
 ```bash
 uv sync
 ```
 
-Create an environment file:
+### 3. Create an environment file
+
+On Linux/macOS:
 
 ```bash
 cp .env.example .env
@@ -182,7 +319,7 @@ On Windows PowerShell:
 Copy-Item .env.example .env
 ```
 
-Add your OpenAI API key to `.env`:
+### 4. Add your OpenAI API key to `.env`
 
 ```env
 OPENAI_API_KEY=your_api_key_here
@@ -190,29 +327,45 @@ OPENAI_MODEL=gpt-4o-mini
 DATABASE_URL=sqlite:///./agent_platform.db
 ```
 
-Run the app:
+### 5. Run the app
 
 ```bash
 uv run python run.py
 ```
 
-Local URLs:
+### 6. Open local URLs
 
-- API root: `http://localhost:8000/`
-- Frontend UI: `http://localhost:8000/app/`
-- API docs: `http://localhost:8000/docs`
+API root:
+
+```text
+http://localhost:8000/
+```
+
+Frontend UI:
+
+```text
+http://localhost:8000/app/
+```
+
+Swagger API docs:
+
+```text
+http://localhost:8000/docs
+```
 
 ## Setup With Docker
 
+### 1. Create `.env`
+
 Create `.env` from `.env.example` and add your OpenAI API key.
 
-Build and run:
+### 2. Build and run
 
 ```bash
 docker compose up --build
 ```
 
-The Docker Compose configuration maps the app to:
+If your Docker Compose file maps port `8001:8000`, open:
 
 ```text
 http://localhost:8001/
@@ -224,7 +377,19 @@ Frontend UI:
 http://localhost:8001/app/
 ```
 
-Stop the container:
+Swagger API docs:
+
+```text
+http://localhost:8001/docs
+```
+
+If your Docker Compose file maps port `8000:8000`, use:
+
+```text
+http://localhost:8000/
+```
+
+### 3. Stop the container
 
 ```bash
 docker compose down
@@ -233,12 +398,12 @@ docker compose down
 ## Environment Variables
 
 | Variable | Required | Description |
-| --- | --- | --- |
+|---|---|---|
 | `OPENAI_API_KEY` | Yes | OpenAI API key used by the backend. |
 | `OPENAI_MODEL` | No | OpenAI model name. Defaults to `gpt-4o-mini`. |
 | `DATABASE_URL` | No | SQLAlchemy database URL. Defaults to SQLite. |
 
-Safe example:
+Safe `.env.example`:
 
 ```env
 OPENAI_API_KEY=
@@ -376,7 +541,6 @@ ai-agent-platform/
 |   |-- tools/
 |   |   |-- calculator.py
 |   |   |-- registry.py
-|   |   |-- text_tools.py
 |   |   `-- wikipedia.py
 |   `-- main.py
 |-- data/
@@ -384,35 +548,42 @@ ai-agent-platform/
 |-- Dockerfile
 |-- pyproject.toml
 |-- README.md
-|-- requirements.txt
 |-- run.py
 |-- uv.lock
 `-- .env.example
 ```
 
+Note: `data/`, local database files, `.env`, and `.venv/` should not be committed to GitHub.
+
 ## What I Learned
 
 This project demonstrates practical backend AI engineering concepts:
 
-- designing an AI agent API with FastAPI
-- integrating OpenAI tool calling
-- defining local tools through structured schemas
-- storing chat history and tool metadata in SQLite
-- building session-based memory
-- exposing logs for observability
-- managing Python dependencies with uv
-- packaging the app with Docker
-- adding a lightweight frontend without changing backend behavior
+- Designing an AI agent API with FastAPI
+- Integrating OpenAI tool calling
+- Defining local tools through structured schemas
+- Executing model-selected tools in the backend
+- Storing chat history and tool metadata in SQLite
+- Building session-based memory
+- Exposing logs for observability
+- Managing Python dependencies with `uv`
+- Packaging the app with Docker
+- Adding a lightweight frontend without turning the project into a frontend-focused app
 
 ## Future Improvements
 
-- Add authentication for protected logs and sessions.
-- Add pagination for logs and long session histories.
-- Add automated tests for API endpoints and tool execution.
-- Add streaming responses for the chat endpoint.
-- Add more tools, such as web search, file analysis, or database lookup.
-- Add production-ready migrations with Alembic.
-- Add deployment instructions for a cloud platform.
+Possible next improvements:
+
+- Add authentication for protected logs and sessions
+- Add pagination for logs and long session histories
+- Add automated tests for API endpoints and tool execution
+- Add streaming responses for the chat endpoint
+- Add more tools, such as web search, file analysis, or database lookup
+- Add production-ready migrations with Alembic
+- Add rate limiting
+- Add better frontend screenshots and demo GIF
+- Add deployment instructions for a cloud platform
+- Add multi-user support
 
 ## Portfolio and Interview Explanation
 
@@ -420,9 +591,19 @@ AI Agent Platform is a backend-focused AI portfolio project. It shows how to bui
 
 In an interview, this project can be used to discuss:
 
-- how tool calling works from model decision to backend execution
-- how session memory is stored and reused
-- how tool errors are captured without crashing the API
-- how database logs improve debugging and observability
-- how to structure a maintainable AI backend project
-- how Docker and uv make local setup more reproducible
+- How tool calling works from model decision to backend execution
+- How session memory is stored and reused
+- How tool errors are captured without crashing the API
+- How database logs improve debugging and observability
+- How the project separates API, agent, LLM, tool, schema, and database layers
+- How Docker and `uv` make local setup more reproducible
+
+## Important Notes
+
+This project is intended as a portfolio and learning project. It is not presented as a full production SaaS product.
+
+Before using it in production, improvements such as authentication, authorization, migrations, tests, rate limiting, monitoring, and deployment hardening would be needed.
+
+## License
+
+This project is for portfolio and educational purposes.
